@@ -1,0 +1,10 @@
+node_modules/
+data/
+artifacts/
+.env
+.env.*
+!.env.example
+.wrangler/
+.dev.vars
+*.log
+*.pem

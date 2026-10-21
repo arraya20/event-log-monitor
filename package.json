@@ -1,0 +1,16 @@
+{
+  "name": "pharos-event-log-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only persistent Pharos Chain MCP Transfer monitor with Cloudflare Pages dashboard",
+  "license": "MIT",
+  "engines": {"node": ">=22"},
+  "bin": {"pharos-event-monitor": "src/cli.mjs"},
+  "scripts": {
+    "start": "node --dns-result-order=ipv4first src/cli.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node --test test/*.test.mjs",
+    "build": "npm run check && npm test"
+  }
+}
