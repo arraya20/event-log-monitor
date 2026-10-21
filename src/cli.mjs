@@ -32,7 +32,7 @@ if (values.help) {
     for (let i = 0; i < cycles && !stopping; i++) {
       try {
         const result = await monitor.poll();
-        console.log(JSON.stringify({ type: 'scan', ...result }));
+        console.log(JSON.stringify({ type: 'scan', scannedTo: result.scannedTo, latestBlock: result.latestBlock, newEvents: result.newEvents, liveEvents: result.liveEvents, firstEvent: result.events[0] ?? null, lastEvent: result.events.at(-1) ?? null }));
       } catch (error) {
         failed = true; console.error(JSON.stringify({ type: 'error', message: error.message }));
         if (cycles !== Infinity) break;
