@@ -1,10 +1,50 @@
+# Dependencies and generated output
 node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Collector state and local evidence
 data/
 artifacts/
+*.log
+*.pid
+*.lock.tmp
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+
+# Environment and provider secrets (examples must contain placeholders only)
 .env
 .env.*
 !.env.example
-.wrangler/
 .dev.vars
-*.log
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+.cloudflare/
+.cloudflared/
+secrets/
+credentials.json
+credentials.*.json
 *.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+
+# Local backups and editor/OS files
+*.bak
+*.bak.*
+*.backup
+*.old
+*.orig
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
