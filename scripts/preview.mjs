@@ -11,7 +11,7 @@ const assets = new Map([
 const port = Number(process.env.PREVIEW_PORT ?? 8792);
 const collectorPort = Number(process.env.COLLECTOR_PORT ?? 8791);
 for (const value of [port, collectorPort]) if (!Number.isInteger(value) || value < 1 || value > 65535) throw new Error('Invalid local port');
-const server = createServer(async (req, res) => {
+export const server = createServer(async (req, res) => {
   res.setHeader('cache-control', 'no-store');
   res.setHeader('x-content-type-options', 'nosniff');
   if (req.method !== 'GET') { res.writeHead(405).end(); return; }
@@ -31,5 +31,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(502, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'Collector unavailable' }));
   }
 });
-server.listen(port, '127.0.0.1', () => console.log(`Local preview http://127.0.0.1:${port}`));
-for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close());
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  server.listen(port, '127.0.0.1', () => console.log(`Local preview http://127.0.0.1:${port}`));
+  for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close());
+}

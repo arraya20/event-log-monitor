@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Read-only Pharos ERC-20 Transfer monitor using official Chain MCP">
+  <title>Pharos Event Monitor</title><link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="masthead"><div><p class="kicker">PHAROS / CHAIN MCP</p><h1>Event monitor</h1><p class="lede">ERC-20 Transfer activity, polled from Pharos Chain MCP. Read-only. No wallet required.</p></div><button id="export" type="button">Export JSON</button></header>
+  <main>
+    <section id="notice" class="notice" role="status" aria-live="polite">Connecting to collector…</section>
+    <section class="facts" aria-label="Monitor status">
+      <div><span>State</span><strong id="state">—</strong></div><div><span>Token</span><strong id="token">—</strong></div><div><span>Chain</span><strong id="chain">—</strong></div><div><span>Last block</span><strong id="block">—</strong></div><div><span>Events stored</span><strong id="count">—</strong></div><div><span>Last scan</span><strong id="scanned">—</strong></div>
+    </section>
+    <section class="config"><div><span>Contract</span><code id="contract">—</code></div><div><span>Source</span><code id="source">—</code></div><div><span>Mode</span><code>polling / confirmed blocks</code></div></section>
+    <section><div class="section-head"><div><p class="kicker">OBSERVATIONS</p><h2>Latest transfers</h2></div><p id="updated">Waiting for first response</p></div><div class="table-wrap"><table><thead><tr><th>Mode</th><th>Block</th><th>From</th><th>To</th><th>Amount</th><th>Transaction</th></tr></thead><tbody id="events"><tr><td colspan="6" class="empty">No events loaded.</td></tr></tbody></table></div></section>
+  </main>
+  <footer>Data comes from a separate persistent collector. Polling delay and confirmation depth are shown by the collector status.</footer>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
