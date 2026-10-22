@@ -70,7 +70,13 @@ export async function onRequest(context) {
       status: upstream.status,
       headers: responseHeaders,
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      "collector fetch failed:",
+      requestUrl.pathname,
+      error?.name,
+      error?.message,
+    );
     return response({ error: "Collector unavailable" }, 502, {
       "x-content-type-options": "nosniff",
     });
