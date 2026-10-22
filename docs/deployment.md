@@ -35,6 +35,10 @@ Pages sends `Authorization: Bearer <COLLECTOR_TOKEN>` if that secret is configur
 - `COLLECTOR_ORIGIN`: fixed HTTPS collector origin, no path/query/credentials.
 - `COLLECTOR_TOKEN`: optional Pages secret matching upstream authentication.
 
+Secrets and variables are snapshotted per deployment. After changing either one, deploy again; an existing deployment keeps its old values. Set secrets for the Production environment, which is configured separately from Preview.
+
+Generate the token with `openssl rand -hex 32`. Put the same value in the collector's `.env.service` (`COLLECTOR_TOKEN=<value>`, no quotes or trailing spaces, mode 600) and restart the service, since the environment file is read only at start. Then set it in Pages with `npx wrangler pages secret put COLLECTOR_TOKEN --project-name event-log-monitor`. The token cannot be recovered from Pages; if it is lost, generate and set a new one in both places.
+
 Check generated `pages.dev` URL before adding `monitor.nampharos.web.id` under Custom domains. Route the monitor domain to Pages, not directly to the collector. Keep collector origin separate from the public dashboard domain to avoid proxy loops.
 
 ## Verification after deployment
@@ -66,3 +70,23 @@ Do not call the deployment complete until the following evidence is captured:
 For a checkpoint hash mismatch, preserve `cursor.json` and `events.json`. Investigate the reorg first; do not delete state as an automatic recovery step.
 
 Record actual URLs, HTTP statuses and captured chain evidence only after these steps run.
+
+## Troubleshooting the dashboard
+
+The dashboard message `collector HTTP <status>/<status>` shows the status returned by the Pages Function. Identify the source before changing anything. Stream live Function logs with:
+
+```sh
+npx wrangler pages deployment tail --project-name event-log-monitor --environment production
+```
+
+| Symptom | Source | Cause and fix |
+| --- | --- | --- |
+| 503, no `x-content-type-options` header | Function | `COLLECTOR_ORIGIN` is missing or not a plain HTTPS origin in that deployment. Set it in `wrangler.toml` `[vars]` or Pages settings, then deploy again. |
+| 502 | Function | `fetch` to the collector threw. Read the `collector fetch failed:` log line for the error name and message. |
+| 401 | Collector or proxy | `COLLECTOR_TOKEN` is missing from Pages Production, differs from the collector's token, or the collector was not restarted after the token changed. Test the collector directly with `curl -H "Authorization: Bearer <token>"`. |
+| 200 but stale | Collector | Check `lastSuccessAt` and `lastScannedBlock` in `/api/status`, and `systemctl status`. |
+
+Known pitfalls:
+
+- **Cloudflare Workers rejects `redirect: "error"`.** `fetch` throws `TypeError: Invalid redirect value` and every request becomes a 502. The proxy uses `redirect: "manual"` and treats any 3xx as an upstream failure, so redirects are still never followed. Node's `fetch` accepts the invalid value, so unit tests cannot catch this class of error; confirm with a live request after deployment.
+- **`<hash>.<project>.pages.dev` URLs are immutable snapshots.** A later deployment gets a new hash and never changes an old one. Test with the production alias or the hash printed by the latest deploy. Compare the served `app.js` with `public/app.js` if unsure which commit a URL is running.
