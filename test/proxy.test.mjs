@@ -132,6 +132,37 @@ test("Pages proxy hides upstream failure and caps oversized response", async () 
   }
 });
 
+test("Pages proxy uses a Workers-supported redirect mode and refuses redirects", async () => {
+  const old = globalThis.fetch;
+  const modes = [];
+  globalThis.fetch = async (_url, init) => {
+    modes.push(init.redirect);
+    return new Response(null, {
+      status: 302,
+      headers: { location: "https://evil.example/" },
+    });
+  };
+  try {
+    const response = await onRequest(
+      context(
+        request("/api/status"),
+        {
+          COLLECTOR_ORIGIN: "https://collector.example",
+          COLLECTOR_TOKEN: "secret",
+        },
+        {},
+      ),
+    );
+    // Cloudflare Workers only accepts "follow" or "manual".
+    assert.deepEqual(modes, ["manual"]);
+    assert.equal(response.status, 502);
+    assert.equal(response.headers.get("location"), null);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+  } finally {
+    globalThis.fetch = old;
+  }
+});
+
 test("Pages proxy preserves upstream auth failure and never caches it", async () => {
   const old = globalThis.fetch;
   globalThis.fetch = async () =>

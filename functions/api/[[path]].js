@@ -51,11 +51,16 @@ export async function onRequest(context) {
   try {
     const upstream = await fetch(new URL(requestUrl.pathname, origin), {
       headers,
-      redirect: "error",
+      // Workers rejects redirect: "error"; use "manual" and refuse 3xx below.
+      redirect: "manual",
       signal: AbortSignal.timeout(8000),
       cf: { cacheTtl: 5, cacheEverything: true },
     });
-    if (upstream.redirected) throw new Error("redirect");
+    if (
+      upstream.type === "opaqueredirect" ||
+      (upstream.status >= 300 && upstream.status < 400)
+    )
+      throw new Error(`unexpected redirect ${upstream.status}`);
     const body = await upstream.arrayBuffer();
     if (body.byteLength > MAX_BODY) throw new Error("large response");
     const responseHeaders = {
