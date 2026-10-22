@@ -2,5 +2,8 @@ name = "pharos-event-log-monitor"
 compatibility_date = "2026-10-01"
 pages_build_output_dir = "public"
 
-# Set COLLECTOR_ORIGIN and COLLECTOR_TOKEN in Cloudflare Pages settings.
+[vars]
+COLLECTOR_ORIGIN = "https://monitor-api.nampharos.web.id"
+
+# Set COLLECTOR_TOKEN as an encrypted secret in Cloudflare Pages settings.
 # Never put authentication secrets in vars or the public/ directory.
