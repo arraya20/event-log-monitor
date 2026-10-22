@@ -41,11 +41,28 @@ Check generated `pages.dev` URL before adding `monitor.nampharos.web.id` under C
 
 1. Collector API is reachable through the expected HTTPS origin only.
 2. Anonymous origin requests are denied when auth is configured.
-3. Pages `/api/status` and `/api/events` return successful no-store JSON.
+3. Pages `/api/status` and `/api/events` return successful JSON; successful responses use a 5-second edge cache and errors remain `no-store`.
 4. Dashboard reports actual current checkpoint and scan time.
 5. Stop collector briefly: dashboard reports stale/unavailable, not healthy live data.
 6. Restart collector: previous checkpoint retained, event IDs remain unique.
 7. Mobile and keyboard dashboard paths work.
 8. Existing reader still responds at `reader.nampharos.web.id`.
+
+## Release gate
+
+Do not call the deployment complete until the following evidence is captured:
+
+```text
+- npm run build: syntax, formatting, and all tests pass
+- npm audit --audit-level=high: no high-severity vulnerabilities
+- systemctl status: collector active
+- unauthorized collector request: 401 or 403
+- authorized collector request: 200
+- Pages status/events routes: 200
+- collector stopped: dashboard stale or unavailable
+- collector restarted: previous cursor retained and event IDs remain unique
+```
+
+For a checkpoint hash mismatch, preserve `cursor.json` and `events.json`. Investigate the reorg first; do not delete state as an automatic recovery step.
 
 Record actual URLs, HTTP statuses and captured chain evidence only after these steps run.

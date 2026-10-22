@@ -1,35 +1,96 @@
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { DEFAULT_CONTRACT, TRANSFER_TOPIC, decodeTransfer, formatUnits } from '../src/events.mjs';
-const word = value => '0x' + BigInt(value).toString(16).padStart(64, '0');
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  DEFAULT_CONTRACT,
+  TRANSFER_TOPIC,
+  decodeTransfer,
+  formatUnits,
+} from "../src/events.mjs";
+import { abiSymbol, abiUint } from "../src/monitor.mjs";
+const word = (value) => "0x" + BigInt(value).toString(16).padStart(64, "0");
+const abiWord = (value) => word(value).slice(2);
+const abiBytes32 = (text) =>
+  "0x" + Buffer.from(text).toString("hex").padEnd(64, "0");
 const log = {
   address: DEFAULT_CONTRACT,
-  topics: [TRANSFER_TOPIC, '0x' + '0'.repeat(24) + '12'.repeat(20), '0x' + '0'.repeat(24) + '34'.repeat(20)],
+  topics: [
+    TRANSFER_TOPIC,
+    "0x" + "0".repeat(24) + "12".repeat(20),
+    "0x" + "0".repeat(24) + "34".repeat(20),
+  ],
   data: word(900719925474099312345678n),
-  transactionHash: '0x' + 'ab'.repeat(32), blockHash: '0x' + 'cd'.repeat(32),
-  blockNumber: '0x123', logIndex: '0x2', removed: false,
+  transactionHash: "0x" + "ab".repeat(32),
+  blockHash: "0x" + "cd".repeat(32),
+  blockNumber: "0x123",
+  logIndex: "0x2",
+  removed: false,
 };
-test('exact uint256 formatting beyond floating point precision', () => {
-  const event = decodeTransfer(log);
-  assert.equal(event.amount, '900719925474099312.345678');
+test("ABI metadata decodes bytes32 and dynamic string symbols", () => {
+  assert.equal(abiUint(word(6)), 6);
+  assert.equal(abiSymbol(abiBytes32("USDC")), "USDC");
+  const encoded =
+    abiWord(32) +
+    abiWord(4) +
+    Buffer.from("TEST").toString("hex").padEnd(64, "0");
+  assert.equal(abiSymbol("0x" + encoded), "TEST");
+});
+
+test("ABI metadata rejects invalid values", () => {
+  assert.throws(() => abiUint(word(256)), /decimals/);
+  assert.throws(() => abiSymbol("0x" + "00".repeat(64)), /offset/);
+  assert.throws(
+    () =>
+      abiSymbol(
+        "0x" + abiWord(32) + abiWord(8) + Buffer.from("x").toString("hex"),
+      ),
+    /length/,
+  );
+});
+test("exact uint256 formatting beyond floating point precision", () => {
+  const event = decodeTransfer(log, {
+    contractAddress: DEFAULT_CONTRACT,
+    decimals: 6,
+    symbol: "USDC",
+  });
+  assert.equal(event.amount, "900719925474099312.345678");
   assert.equal(event.blockNumber, 291);
-  assert.equal(event.from, '0x' + '12'.repeat(20));
-  assert.equal(event.to, '0x' + '34'.repeat(20));
+  assert.equal(event.from, "0x" + "12".repeat(20));
+  assert.equal(event.to, "0x" + "34".repeat(20));
 });
-test('format handles zero decimals and 255 decimals without rounding', () => {
-  assert.equal(formatUnits('10', 0), '10');
-  const formatted = formatUnits('1', 255);
-  assert.equal(formatted, '0.' + '0'.repeat(254) + '1');
+test("format handles zero decimals and 255 decimals without rounding", () => {
+  assert.equal(formatUnits("10", 0), "10");
+  const formatted = formatUnits("1", 255);
+  assert.equal(formatted, "0." + "0".repeat(254) + "1");
 });
-test('reject ERC721, noncanonical topics, malformed amounts, foreign contract and removed logs', () => {
+test("reject ERC721, noncanonical topics, malformed amounts, foreign contract and removed logs", () => {
   for (const patch of [
     { topics: [...log.topics, word(7)] },
-    { topics: [TRANSFER_TOPIC, '0x' + 'ff'.repeat(32), log.topics[2]] },
-    { data: '0x1' }, { address: '0x' + 'ff'.repeat(20) }, { removed: true },
-    { transactionHash: '0x123' }, { blockHash: '0x123' }, { logIndex: '-1' },
-  ]) assert.throws(() => decodeTransfer({ ...log, ...patch }));
+    { topics: [TRANSFER_TOPIC, "0x" + "ff".repeat(32), log.topics[2]] },
+    { data: "0x1" },
+    { address: "0x" + "ff".repeat(20) },
+    { removed: true },
+    { transactionHash: "0x123" },
+    { blockHash: "0x123" },
+    { logIndex: "-1" },
+  ])
+    assert.throws(() => decodeTransfer({ ...log, ...patch }));
 });
-test('backfill distinguished from observation after startup', () => {
-  assert.equal(decodeTransfer(log, { backfill: true }).mode, 'backfill');
-  assert.equal(decodeTransfer(log).mode, 'live');
+test("backfill distinguished from observation after startup", () => {
+  assert.equal(
+    decodeTransfer(log, {
+      contractAddress: DEFAULT_CONTRACT,
+      decimals: 6,
+      symbol: "USDC",
+      backfill: true,
+    }).mode,
+    "backfill",
+  );
+  assert.equal(
+    decodeTransfer(log, {
+      contractAddress: DEFAULT_CONTRACT,
+      decimals: 6,
+      symbol: "USDC",
+    }).mode,
+    "live",
+  );
 });
