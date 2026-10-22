@@ -5,7 +5,11 @@ import {
   TRANSFER_TOPIC,
   address,
   integer,
-  decodeTransfer,
+  decodeEvent,
+  categoryOf,
+  categoriesFor,
+  eventTopics,
+  parseEventTypes,
 } from "./events.mjs";
 import { StateStore } from "./store.mjs";
 
@@ -41,7 +45,7 @@ export function abiSymbol(data) {
 }
 
 export function isPermanentMonitorError(error) {
-  return /checkpoint block hash mismatch|possible reorg|manual recovery|required Pharos chain ID|Expected Pharos chain ID|token metadata changed|target has no contract bytecode|returned invalid JSON|returned non-array|Log outside requested range|Not an ERC20 Transfer|Unexpected log contract|Noncanonical|Invalid uint256|Invalid EVM address|Invalid token|ABI|Removed log/i.test(
+  return /checkpoint block hash mismatch|possible reorg|manual recovery|required Pharos chain ID|Expected Pharos chain ID|token metadata changed|target has no contract bytecode|returned invalid JSON|returned non-array|Log outside requested range|Not an ERC20|Unexpected event signature|Unexpected log contract|Noncanonical|Invalid uint256|Invalid EVM address|Invalid token|ABI|Removed log/i.test(
     error.message,
   );
 }
@@ -54,9 +58,12 @@ export class Monitor {
     confirmations = 5,
     fromBlock,
     chunkSize = 500,
+    eventTypes = ["transfer"],
     client = new McpClient(),
   } = {}) {
     this.contract = address(contract);
+    this.eventTypes = parseEventTypes(eventTypes);
+    this.topics = eventTopics(this.eventTypes);
     this.intervalMs = integer(intervalMs);
     this.confirmations = integer(confirmations);
     this.chunkSize = integer(chunkSize);
@@ -69,12 +76,15 @@ export class Monitor {
       throw new Error("Invalid monitor limits");
     this.fromBlock = fromBlock === undefined ? undefined : integer(fromBlock);
     this.client = client;
+    // Transfer-only keeps the original fingerprint so existing state directories resume.
+    const transferOnly =
+      this.topics.length === 1 && this.topics[0] === TRANSFER_TOPIC;
     this.store = new StateStore(
       dataDir,
       JSON.stringify({
         chainId: PHAROS_CHAIN_ID,
         contract: this.contract,
-        topic: TRANSFER_TOPIC,
+        ...(transferOnly ? { topic: TRANSFER_TOPIC } : { topics: this.topics }),
       }),
     );
     this.status = {
@@ -83,6 +93,8 @@ export class Monitor {
       symbol: null,
       decimals: null,
       mcpUrl: MCP_URL,
+      eventTypes: this.eventTypes,
+      categories: categoriesFor(this.eventTypes),
       pollIntervalMs: this.intervalMs,
       confirmations: this.confirmations,
       latestBlock: null,
@@ -167,7 +179,14 @@ export class Monitor {
   }
 
   events() {
-    return [...(this.store.state?.events ?? [])].reverse().slice(0, 100);
+    return [...(this.store.state?.events ?? [])]
+      .reverse()
+      .slice(0, 300)
+      .map((event) => ({
+        ...event,
+        category: categoryOf(event),
+        timestamp: event.timestamp ?? null,
+      }));
   }
 
   async poll() {
@@ -200,7 +219,7 @@ export class Monitor {
       if (to >= state.nextBlock) {
         const args = {
           address: this.contract,
-          topics: [TRANSFER_TOPIC],
+          topics: [this.topics.length === 1 ? this.topics[0] : this.topics],
           fromBlock: String(state.nextBlock),
           toBlock: String(to),
         };
@@ -212,11 +231,12 @@ export class Monitor {
           throw new Error("get_logs returned non-array");
         const decoded = logs
           .map((log) => {
-            const event = decodeTransfer(log, {
+            const event = decodeEvent(log, {
               contractAddress: this.contract,
               decimals: this.status.decimals,
               symbol: this.status.symbol,
               backfill: integer(log.blockNumber) <= this.liveBoundary,
+              types: this.eventTypes,
             });
             if (event.blockNumber < state.nextBlock || event.blockNumber > to)
               throw new Error("Log outside requested range");

@@ -10,6 +10,7 @@ const { values } = parseArgs({
   options: {
     contract: { type: "string" },
     "from-block": { type: "string" },
+    events: { type: "string" },
     "data-dir": { type: "string" },
     port: { type: "string", default: "8791" },
     "interval-ms": { type: "string", default: "10000" },
@@ -22,7 +23,7 @@ const { values } = parseArgs({
 
 if (values.help) {
   console.log(
-    "pharos-event-monitor [--contract 0x...] [--from-block N] [--data-dir ./data] [--port 8791] [--interval-ms 10000] [--confirmations 5] [--cycles N] [--once]",
+    "pharos-event-monitor [--contract 0x...] [--from-block N] [--events transfer,approval,deposit,withdrawal] [--data-dir ./data] [--port 8791] [--interval-ms 10000] [--confirmations 5] [--cycles N] [--once]",
   );
 } else {
   let monitor;
@@ -54,6 +55,7 @@ if (values.help) {
       intervalMs: values["interval-ms"],
       confirmations: values.confirmations,
       fromBlock: values["from-block"],
+      eventTypes: values.events,
     });
     await monitor.initialize();
     if (!values.once) {
