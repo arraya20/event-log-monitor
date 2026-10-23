@@ -14,7 +14,7 @@
 | Public origin to loopback | Anonymous request floods | Authenticate and rate-limit at reverse proxy; do not expose port directly |
 | MCP response to decoder | Malformed ABI, oversized responses, bad chain | Validate chain/addresses/topics/integers; response caps and timeouts |
 | Chain log to browser | HTML/script injection | textContent, constructed explorer URLs, restrictive CSP |
-| Process to disk | Concurrent writers / cursor loss | Single owner lock; cursor + events written atomically |
+| Process to disk | Concurrent writers / cursor loss | Single owner lock; events and cursor files each replaced atomically, events first, so a crash is recovered by rescan and ID deduplication |
 | Retry to chain | Duplicate processing | Stable event IDs, checkpointed range, sequential polls |
 | Chain reorganization | Orphaned event evidence | Confirmation delay and checkpoint hash validation; fail closed |
 

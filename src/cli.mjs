@@ -2,7 +2,7 @@
 import { parseArgs } from "node:util";
 import { setTimeout as delay } from "node:timers/promises";
 import { once } from "node:events";
-import { Monitor } from "./monitor.mjs";
+import { Monitor, scanSummary } from "./monitor.mjs";
 import { createApi } from "./server.mjs";
 import { integer } from "./events.mjs";
 
@@ -83,17 +83,7 @@ if (values.help) {
         const result = await monitor.poll();
         errorStreak = 0;
         retryDelayMs = 0;
-        console.log(
-          JSON.stringify({
-            type: "scan",
-            scannedTo: result.scannedTo,
-            latestBlock: result.latestBlock,
-            newEvents: result.newEvents,
-            liveEvents: result.liveEvents,
-            firstEvent: result.events[0] ?? null,
-            lastEvent: result.events.at(-1) ?? null,
-          }),
-        );
+        console.log(JSON.stringify(scanSummary(result)));
         if (!result.caughtUp && cycles === Infinity) continue;
       } catch (error) {
         failed = true;

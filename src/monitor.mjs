@@ -44,6 +44,30 @@ export function abiSymbol(data) {
     .slice(0, 64);
 }
 
+// Compact per-scan log record; full events stay in the state files and API.
+export function scanSummary(result) {
+  const categories = {};
+  for (const event of result.events)
+    categories[event.category] = (categories[event.category] ?? 0) + 1;
+  const last = result.events.at(-1);
+  return {
+    type: "scan",
+    scannedTo: result.scannedTo,
+    latestBlock: result.latestBlock,
+    newEvents: result.newEvents,
+    liveEvents: result.liveEvents,
+    categories,
+    lastEvent: last
+      ? {
+          transactionHash: last.transactionHash,
+          blockNumber: last.blockNumber,
+          timestamp: last.timestamp,
+          category: last.category,
+        }
+      : null,
+  };
+}
+
 export function isPermanentMonitorError(error) {
   return /checkpoint block hash mismatch|possible reorg|manual recovery|required Pharos chain ID|Expected Pharos chain ID|token metadata changed|target has no contract bytecode|returned invalid JSON|returned non-array|Log outside requested range|Not an ERC20|Unexpected event signature|Unexpected log contract|Noncanonical|Invalid uint256|Invalid EVM address|Invalid token|ABI|Removed log/i.test(
     error.message,
